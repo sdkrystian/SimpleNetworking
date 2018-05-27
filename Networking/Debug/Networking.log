@@ -1,4 +1,0 @@
-﻿  Test.cpp
-c:\users\krystian\documents\visual studio 2017\projects\networking\networking\networking.h(519): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
-  Networking.vcxproj -> C:\Users\Krystian\Documents\Visual Studio 2017\Projects\Networking\Debug\Networking.exe
-  Networking.vcxproj -> C:\Users\Krystian\Documents\Visual Studio 2017\Projects\Networking\Debug\Networking.pdb (Partial PDB)
