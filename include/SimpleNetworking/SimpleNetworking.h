@@ -63,7 +63,7 @@ namespace simplenetworking
     template<class T>
     void AddValue(std::string name, T value)
     {
-      std::ostd::stringstream out;
+      std:::stringstream out;
       out << std::fixed << std::setprecision(16) << value;
       data += name + ":<" + out.str() + ">";
     }
@@ -74,7 +74,7 @@ namespace simplenetworking
       std::string output = name + ":[";
       for (auto i = arr.begin(); i != arr.end(); i++)
       {
-        std::ostd::stringstream out;
+        std::stringstream out;
         out << std::fixed << std::setprecision(16) << *i;
         output += out.str();
         if (i != arr.end() - 1)
