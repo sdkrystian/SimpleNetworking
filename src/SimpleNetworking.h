@@ -1,3 +1,5 @@
+// Copyright 2018 Krystian Stasiowski
+
 #include <vector>
 #include <string>
 #include <thread>
@@ -24,7 +26,7 @@ namespace simplenetworking
 
     inline int RandomRange(int min, int max)
     {
-      return min + (int)((double)rand() / (RAND_MAX + 1) * (max - min + 1));
+      return min + static_cast<int>(static_cast<double>(rand() / (RAND_MAX + 1) * (max - min + 1)));
     }
   }
   struct ClientInfo
@@ -47,7 +49,7 @@ namespace simplenetworking
   public:
     std::string data;
 
-    PacketData(std::string dta)
+    explicit PacketData(std::string dta)
     {
       data = dta;
     }
@@ -160,7 +162,7 @@ namespace simplenetworking
       callback = cb;
     }
 
-    bool operator==(std::string& other)
+    bool operator==(const std::string& other)
     {
       return name == other;
     }
@@ -178,7 +180,7 @@ namespace simplenetworking
       callback = cb;
     }
 
-    bool operator==(std::string& other)
+    bool operator==(const std::string& other)
     {
       return name == other;
     }
@@ -240,7 +242,7 @@ namespace simplenetworking
       data = dta;
     }
 
-    ServerPacket(std::string cmd)
+    explicit ServerPacket(std::string cmd)
     {
       command = cmd;
     }
@@ -285,7 +287,7 @@ namespace simplenetworking
       data = PacketData();
     }
 
-    ClientPacket(char* buffer)
+    explicit ClientPacket(char* buffer)
     {
       rawpacket = std::string(buffer);
       clientid = GetValueFromPacket("clientid");
@@ -336,11 +338,11 @@ namespace simplenetworking
       }
       socketudp_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
       sockettcp_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-      if (::bind(socketudp_, (sockaddr*)&address_, sizeof(address_)) < 0)
+      if (::bind(socketudp_, reinterpret_cast<sockaddr*>(&address_), sizeof(address_)) < 0)
       {
         return false;
       }
-      if (::bind(sockettcp_, (sockaddr*)&address_, sizeof(address_)) < 0)
+      if (::bind(sockettcp_, reinterpret_cast<sockaddr*>(&address_), sizeof(address_)) < 0)
       {
         return false;
       }
@@ -359,7 +361,7 @@ namespace simplenetworking
     {
       if (type == EConnectionType::UDP)
       {
-        return sendto(socketudp_, packet.Parse().c_str(), packet.Size(), 0, (sockaddr*)&client.address, sizeof(sockaddr_in));
+        return sendto(socketudp_, packet.Parse().c_str(), packet.Size(), 0, reinterpret_cast<sockaddr*>(&client.address), sizeof(sockaddr_in));
       }
       else if (type == EConnectionType::TCP)
       {
@@ -430,7 +432,7 @@ namespace simplenetworking
               SOCKET client;
               sockaddr_in addr;
               int addrsize = sizeof(addr);
-              client = accept(sockettcp_, (sockaddr*)&addr, &addrsize);
+              client = accept(sockettcp_, reinterpret_cast<sockaddr*>(&addr), &addrsize);
               if (client != INVALID_SOCKET)
               {
                 AddClient(client);
@@ -445,7 +447,7 @@ namespace simplenetworking
                   char buffer[65535];
                   sockaddr_in addr;
                   int addrsize = sizeof(addr);
-                  if (recv(c.socket, buffer, sizeof(buffer), 0) > 0 || recvfrom(socketudp_, buffer, sizeof(buffer), 0, (sockaddr*)&addr, &addrsize) > 0)
+                  if (recv(c.socket, buffer, sizeof(buffer), 0) > 0 || recvfrom(socketudp_, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr*>(&addr), &addrsize) > 0)
                   {
                     ClientPacket packet(buffer);
                     ClientInfo& client = GetClient(packet.clientid);
@@ -555,11 +557,11 @@ namespace simplenetworking
       sockaddr_in addr;
       addr.sin_family = AF_INET;
       inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr);
-      if (::bind(socketudp_, (sockaddr*)&addr, sizeof(sockaddr_in)) < 0)
+      if (::bind(socketudp_, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in)) < 0)
       {
         return false;
       }
-      if (::connect(sockettcp_, (sockaddr*)&address_, sizeof(sockaddr_in)) < 0)
+      if (::connect(sockettcp_, reinterpret_cast<sockaddr*>(&address_), sizeof(sockaddr_in)) < 0)
       {
         return false;
       }
@@ -574,7 +576,7 @@ namespace simplenetworking
     {
       if (type == EConnectionType::UDP)
       {
-        return sendto(socketudp_, packet.Parse().c_str(), packet.Size(), 0, (sockaddr*)&address_, sizeof(sockaddr_in));
+        return sendto(socketudp_, packet.Parse().c_str(), packet.Size(), 0, reinterpret_cast<sockaddr*>(&address_), sizeof(sockaddr_in));
       }
       else if (type == EConnectionType::TCP)
       {
@@ -633,7 +635,7 @@ namespace simplenetworking
               char buffer[65535];
               sockaddr_in addr;
               int addrsize = sizeof(addr);
-              if (recv(sockettcp_, buffer, sizeof(buffer), 0) > 0 || recvfrom(socketudp_, buffer, sizeof(buffer), 0, (sockaddr*)&addr, &addrsize) > 0)
+              if (recv(sockettcp_, buffer, sizeof(buffer), 0) > 0 || recvfrom(socketudp_, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr*>(&addr), &addrsize) > 0)
               {
                 lastresponse_ = util::TimeMiliseconds();
                 ServerPacket packet(buffer, true);
