@@ -2,9 +2,6 @@
 #include <string>
 #include <thread>
 #include <algorithm> 
-#include <stdio.h>
-#include <tchar.h>
-#include "stdlib.h"
 #include "Ws2tcpip.h"
 #include "WinSock2.h"
 #include <windows.h>
@@ -20,12 +17,12 @@ namespace simplenetworking
 {
   namespace util
   {
-    unsigned long long TimeMiliseconds()
+    inline unsigned long long TimeMiliseconds()
     {
       return std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     }
 
-    int RandomRange(int min, int max)
+    inline int RandomRange(int min, int max)
     {
       return min + (int)((double)rand() / (RAND_MAX + 1) * (max - min + 1));
     }
@@ -63,7 +60,7 @@ namespace simplenetworking
     template<class T>
     void AddValue(std::string name, T value)
     {
-      std:::stringstream out;
+      std::stringstream out;
       out << std::fixed << std::setprecision(16) << value;
       data += name + ":<" + out.str() + ">";
     }
@@ -302,7 +299,7 @@ namespace simplenetworking
     }
   };
 
-  enum EConnectionType
+  enum class EConnectionType
   {
     TCP,
     UDP
@@ -315,7 +312,13 @@ namespace simplenetworking
     int timeout = 10000;
     std::vector<ClientInfo> clients;
 
-    Server(int portnum, std::vector<Request> handlerlist)
+    Server() = default;
+    Server(const Server&) = delete;
+    Server& operator=(const Server&) = delete;
+    Server(Server&&) = delete;
+    Server& operator=(Server&&) = delete;
+
+    void Init(int portnum, const std::vector<Request>& handlerlist)
     {
       port = portnum;
       handlers_ = handlerlist;
@@ -323,11 +326,6 @@ namespace simplenetworking
       address_.sin_port = htons(port);
       inet_pton(AF_INET, "0.0.0.0", &address_.sin_addr);
       addresssize_ = sizeof(address_);
-    }
-
-    Server()
-    {
-      Server(7777, std::vector<Request>());
     }
 
     bool Start()
@@ -357,7 +355,7 @@ namespace simplenetworking
       return true;
     }
 
-    int Send(ClientInfo client, EConnectionType type, ServerPacket packet)
+    int Send(ClientInfo& client, EConnectionType type, ServerPacket packet)
     {
       if (type == EConnectionType::UDP)
       {
@@ -373,9 +371,14 @@ namespace simplenetworking
       }
     }
 
+    ClientInfo& GetClient(std::string clientid)
+    {
+      return *std::find_if(clients.begin(), clients.end(), [clientid](ClientInfo x){ return x.clientid == clientid; });
+    }
+
     void SendAll(EConnectionType type, ServerPacket packet)
     {
-      for (const ClientInfo& c : clients)
+      for (ClientInfo& c : clients)
       {
         Send(c, type, packet);
       }
@@ -388,7 +391,7 @@ namespace simplenetworking
 
     void RemoveHandler(std::string name)
     {
-      std::remove_if(handlers_.begin(), handlers_.end(), [&] (Request reuqest) {return reuqest == name; });
+      std::remove_if(handlers_.begin(), handlers_.end(), [&](Request reuqest){return reuqest == name; });
     }
 
     void Close()
@@ -405,13 +408,12 @@ namespace simplenetworking
     fd_set read_;
     int addresssize_;
     std::vector<Request> handlers_;
-    Request norequest_ = Request("null", [] (std::string clientid, PacketData data) { return; });
+    Request norequest_ = Request("null", [](std::string clientid, PacketData data){ return; });
     std::thread update_;
 
     void Run()
     {
-      std::function<void()> serverrun = [&] () 
-      {
+      std::function<void()> serverrun = [&](){
         while (true)
         {
           FD_ZERO(&read_);
@@ -470,14 +472,9 @@ namespace simplenetworking
       update_ = std::thread(serverrun);
     }
 
-    ClientInfo& GetClient(std::string clientid)
-    {
-      return *std::find_if(clients.begin(), clients.end(), [clientid] (ClientInfo x) { return x.clientid == clientid; });
-    }
-
     Request& GetRequest(std::string request)
     {
-      auto result = find_if(handlers_.begin(), handlers_.end(), [&] (Request x) { return x == request; });
+      auto result = find_if(handlers_.begin(), handlers_.end(), [&](Request x){ return x == request; });
       return result == handlers_.end() ? norequest_ : *result;
     }
 
@@ -485,10 +482,10 @@ namespace simplenetworking
     {
       GetRequest("disconnect").callback(clientid, PacketData());
       closesocket(GetClient(clientid).socket);
-      clients.erase(std::remove_if(clients.begin(), clients.end(), [&] (ClientInfo x) { return x.clientid == clientid; }), clients.end());
+      clients.erase(std::remove_if(clients.begin(), clients.end(), [&](ClientInfo x){ return x.clientid == clientid; }), clients.end());
     }
 
-    ClientInfo AddClient(SOCKET sock)
+    ClientInfo& AddClient(SOCKET sock)
     {
       std::string id = GenerateClientID();
       ClientInfo clientinfo(sock, id);
@@ -500,7 +497,7 @@ namespace simplenetworking
       return clientinfo;
     }
 
-    bool IsConnected(ClientInfo client)
+    bool IsConnected(ClientInfo& client)
     {
       ServerPacket packet("heartbeat");
       if (Send(client, EConnectionType::TCP, packet) > 0)
@@ -533,17 +530,18 @@ namespace simplenetworking
     std::string clientid;
     int timeout = 10000;
 
-    Client(std::string ipaddr, int portnum, std::vector<Command> handlerlist)
+    Client() = default;
+    Client(const Client&) = delete;
+    Client& operator=(const Client&) = delete;
+    Client(Client&&) = delete;
+    Client& operator=(Client&&) = delete;
+
+    void Init(const std::string& ipaddr, int portnum, const std::vector<Command>& handlerlist)
     {
       handlers_ = handlerlist;
       address_.sin_family = AF_INET;
       address_.sin_port = htons(portnum);
       inet_pton(AF_INET, ipaddr.c_str(), &address_.sin_addr);
-    }
-
-    Client()
-    {
-      Client("0.0.0.0", 7777, std::vector<Command>());
     }
 
     bool Start()
@@ -595,7 +593,7 @@ namespace simplenetworking
 
     void RemoveHandler(std::string name)
     {
-      std::remove_if(handlers_.begin(), handlers_.end(), [&] (Command command) {return command == name; });
+      std::remove_if(handlers_.begin(), handlers_.end(), [&](Command command){return command == name; });
     }
 
     void Disconnect()
@@ -615,15 +613,14 @@ namespace simplenetworking
     fd_set read_;
     unsigned long long lastresponse_;
     std::vector<Command> handlers_;
-    Command nocommand_ = Command("null", [] (PacketData data) {});
+    Command nocommand_ = Command("null", [](PacketData data){ });
     std::thread update_;
     std::thread checktimeout_;
     bool connected_ = false;
 
     void Run()
     {
-      std::function<void()> clientrun = [&] () 
-      {
+      std::function<void()> clientrun = [&](){
         while (true)
         {
           FD_ZERO(&read_);
@@ -656,7 +653,7 @@ namespace simplenetworking
           }
         }
       };
-      std::function<void()> checkto = [&] () {
+      std::function<void()> checkto = [&](){
         while (true)
         {
           if (connected_)
@@ -675,7 +672,7 @@ namespace simplenetworking
 
     Command& GetCommand(std::string command)
     {
-      auto result = find_if(handlers_.begin(), handlers_.end(), [&] (Command x) { return x == command; });
+      auto result = find_if(handlers_.begin(), handlers_.end(), [&](Command x){ return x == command; });
       return result == handlers_.end() ? nocommand_ : *result;
     }
   };
